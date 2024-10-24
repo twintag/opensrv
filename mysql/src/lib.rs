@@ -387,6 +387,9 @@ where
             .1;
 
         writer.set_seq(seq + 1);
+        writer.write_all(&[0x00])?;
+        writer.end_packet().await?;
+        writer.flush_all().await?;
 
         #[cfg(not(feature = "tls"))]
         if handshake.capabilities.contains(CapabilityFlags::CLIENT_SSL) {
