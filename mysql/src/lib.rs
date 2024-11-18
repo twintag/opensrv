@@ -387,9 +387,6 @@ where
             .1;
 
         writer.set_seq(seq + 1);
-        writer.write_all(&[0x00])?;
-        writer.end_packet().await?;
-        writer.flush_all().await?;
 
         #[cfg(not(feature = "tls"))]
         if handshake.capabilities.contains(CapabilityFlags::CLIENT_SSL) {
@@ -542,14 +539,20 @@ where
                         &mut self.writer,
                     )
                     .await?;
-                } else {
-                    writers::write_ok_packet(
-                        &mut self.writer,
-                        self.client_capabilities,
-                        OkResponse::default(),
+                    self.writer.flush_all().await?;
+                    return Err(io::Error::new(
+                        io::ErrorKind::ConnectionAborted,
+                        "database name requried: please add db name to the connection",
                     )
-                    .await?;
+                    .into());
                 }
+
+                writers::write_ok_packet(
+                    &mut self.writer,
+                    self.client_capabilities,
+                    OkResponse::default(),
+                )
+                .await?;
             }
 
             self.writer.flush_all().await?;
