@@ -22,7 +22,7 @@ async-trait = "0.1.52"
 byteorder = "1.4.3"
 bytes = "1.7.0"
 chrono = "0.4.20"
-mysql_common = { version = "0.32", features = ["chrono"] }
+mysql_common = { version = "0.34", features = ["chrono"] }
 nom = "7.1.0"
 tokio = { version = "1.17.0", features = ["io-util", "io-std"] }
 tokio-rustls = { version = "0.26", optional = true, default-features = false, features = [
