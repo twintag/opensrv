@@ -19,22 +19,22 @@ default = ["tls"]
 tls = ["tokio-rustls", "pin-project-lite"]
 
 [dependencies]
-async-trait = "0.1.52"
-byteorder = "1.4.3"
-bytes = "1.7.0"
-chrono = "0.4.20"
+async-trait = "0.1"
+byteorder = "1"
+bytes = "1"
+chrono = "0.4"
 mysql_common = { version = "0.34", features = ["chrono"] }
 nom = "7.1.0"
-tokio = { version = "1.17.0", features = ["io-util", "io-std"] }
+tokio = { version = "1.48", features = ["io-util", "io-std"] }
 tokio-rustls = { version = "0.26", optional = true, default-features = false, features = [
     "ring",
 ] }
-pin-project-lite = { version = "0.2.9", optional = true }
+pin-project-lite = { version = "0.2", optional = true }
 
 [dev-dependencies]
-mysql = "=24.0.0"
-mysql_async = "=0.35"
-tokio = { version = "1.0", features = ["full"] }
+mysql = "24.0.0"
+mysql_async = "0.36.0"
+tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 rcgen = "0.12"
 tempfile = "3.3.0"
@@ -53,3 +53,4 @@ path = "examples/serve_one.rs"
 [[example]]
 name = "serve_secure"
 path = "examples/serve_secure.rs"
+
