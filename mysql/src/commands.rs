@@ -64,7 +64,7 @@ pub fn client_handshake(i: &[u8], after_tls: bool) -> nom::IResult<&[u8], Client
 
         let (i, username) = if after_tls || !capabilities.contains(CapabilityFlags::CLIENT_SSL) {
             let (i, user) = nom::bytes::complete::take_until(&b"\0"[..])(i)?;
-            let (i, _) = nom::bytes::complete::tag(b"\0")(i)?;
+            let (i, _) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
             (i, Some(user.to_owned()))
         } else {
             (i, None)
@@ -84,7 +84,7 @@ pub fn client_handshake(i: &[u8], after_tls: bool) -> nom::IResult<&[u8], Client
         let (i, db) =
             if capabilities.contains(CapabilityFlags::CLIENT_CONNECT_WITH_DB) && !i.is_empty() {
                 let (i, db) = nom::bytes::complete::take_until(&b"\0"[..])(i)?;
-                let (i, _) = nom::bytes::complete::tag(b"\0")(i)?;
+                let (i, _) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
                 (i, Some(db))
             } else {
                 (i, None)
@@ -94,7 +94,7 @@ pub fn client_handshake(i: &[u8], after_tls: bool) -> nom::IResult<&[u8], Client
             if capabilities.contains(CapabilityFlags::CLIENT_PLUGIN_AUTH) && !i.is_empty() {
                 let (i, auth_plugin) = nom::bytes::complete::take_until(&b"\0"[..])(i)?;
 
-                let (i, _) = nom::bytes::complete::tag(b"\0")(i)?;
+                let (i, _) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
                 (i, auth_plugin)
             } else {
                 (i, &b""[..])
@@ -118,15 +118,15 @@ pub fn client_handshake(i: &[u8], after_tls: bool) -> nom::IResult<&[u8], Client
         let (i, maxps2) = nom::number::complete::le_u8(i)?;
         let maxps = ((maxps2 as u32) << 16) | (maxps1 as u32);
         let (i, username) = nom::bytes::complete::take_until(&b"\0"[..])(i)?;
-        let (i, _) = nom::bytes::complete::tag(b"\0")(i)?;
+        let (i, _) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
 
         let (i, auth_response, db) =
             if capabilities.contains(CapabilityFlags::CLIENT_CONNECT_WITH_DB) {
-                let (i, auth_response) = nom::bytes::complete::tag(b"\0")(i)?;
-                let (i, _) = nom::bytes::complete::tag(b"\0")(i)?;
+                let (i, auth_response) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
+                let (i, _) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
 
-                let (i, db) = nom::bytes::complete::tag(b"\0")(i)?;
-                let (i, _) = nom::bytes::complete::tag(b"\0")(i)?;
+                let (i, db) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
+                let (i, _) = nom::bytes::complete::tag(&b"\0"[..])(i)?;
 
                 (i, auth_response, Some(db))
             } else {
@@ -207,36 +207,38 @@ pub fn parse(i: &[u8]) -> nom::IResult<&[u8], Command<'_>> {
     use nom::bytes::complete::tag;
     use nom::combinator::{map, rest};
     use nom::sequence::preceded;
+    use nom::Parser;
     nom::branch::alt((
         map(
-            preceded(tag(&[CommandByte::COM_QUERY as u8]), rest),
+            preceded(tag(&[CommandByte::COM_QUERY as u8][..]), rest),
             Command::Query,
         ),
         map(
-            preceded(tag(&[CommandByte::COM_FIELD_LIST as u8]), rest),
+            preceded(tag(&[CommandByte::COM_FIELD_LIST as u8][..]), rest),
             Command::ListFields,
         ),
         map(
-            preceded(tag(&[CommandByte::COM_INIT_DB as u8]), rest),
+            preceded(tag(&[CommandByte::COM_INIT_DB as u8][..]), rest),
             Command::Init,
         ),
         map(
-            preceded(tag(&[CommandByte::COM_STMT_PREPARE as u8]), rest),
+            preceded(tag(&[CommandByte::COM_STMT_PREPARE as u8][..]), rest),
             Command::Prepare,
         ),
-        preceded(tag(&[CommandByte::COM_STMT_EXECUTE as u8]), execute),
+        preceded(tag(&[CommandByte::COM_STMT_EXECUTE as u8][..]), execute),
         preceded(
-            tag(&[CommandByte::COM_STMT_SEND_LONG_DATA as u8]),
+            tag(&[CommandByte::COM_STMT_SEND_LONG_DATA as u8][..]),
             send_long_data,
         ),
         map(
             preceded(
-                tag(&[CommandByte::COM_STMT_CLOSE as u8]),
+                tag(&[CommandByte::COM_STMT_CLOSE as u8][..]),
                 nom::number::complete::le_u32,
             ),
             Command::Close,
         ),
-        map(tag(&[CommandByte::COM_QUIT as u8]), |_| Command::Quit),
-        map(tag(&[CommandByte::COM_PING as u8]), |_| Command::Ping),
-    ))(i)
+        map(tag(&[CommandByte::COM_QUIT as u8][..]), |_| Command::Quit),
+        map(tag(&[CommandByte::COM_PING as u8][..]), |_| Command::Ping),
+    ))
+    .parse(i)
 }

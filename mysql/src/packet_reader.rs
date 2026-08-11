@@ -17,10 +17,10 @@ use std::io::prelude::*;
 
 use std::iter::Enumerate;
 use std::marker::PhantomData;
-use std::ops::RangeFrom;
 
 use bytes::BytesMut;
 use nom::Needed;
+use nom::Parser;
 use tokio::io::AsyncRead;
 use tokio::io::AsyncReadExt;
 
@@ -240,18 +240,6 @@ impl AsRef<[u8]> for NomBytes {
     }
 }
 
-impl nom::InputTake for NomBytes {
-    fn take(&self, count: usize) -> Self {
-        NomBytes(self.0.slice(0..count))
-    }
-
-    fn take_split(&self, count: usize) -> (Self, Self) {
-        let mut prefix = self.0.clone();
-        let suffix = prefix.split_off(count);
-        (NomBytes(suffix), NomBytes(prefix))
-    }
-}
-
 impl nom::Compare<&[u8]> for NomBytes {
     fn compare(&self, t: &[u8]) -> nom::CompareResult {
         self.0.as_ref().compare(t)
@@ -262,25 +250,33 @@ impl nom::Compare<&[u8]> for NomBytes {
     }
 }
 
-impl nom::InputLength for NomBytes {
+impl nom::Input for NomBytes {
+    type Item = u8;
+    type Iter = bytes::buf::IntoIter<bytes::Bytes>;
+    type IterIndices = Enumerate<Self::Iter>;
+
+    #[inline]
     fn input_len(&self) -> usize {
         self.0.len()
     }
-}
-
-impl nom::InputIter for NomBytes {
-    type Item = u8;
-    type Iter = Enumerate<Self::IterElem>;
-    type IterElem = bytes::buf::IntoIter<bytes::Bytes>;
 
     #[inline]
-    fn iter_indices(&self) -> Self::Iter {
-        self.iter_elements().enumerate()
+    fn take(&self, index: usize) -> Self {
+        NomBytes(self.0.slice(0..index))
     }
+
     #[inline]
-    fn iter_elements(&self) -> Self::IterElem {
-        self.0.clone().into_iter()
+    fn take_from(&self, index: usize) -> Self {
+        NomBytes(self.0.slice(index..))
     }
+
+    #[inline]
+    fn take_split(&self, index: usize) -> (Self, Self) {
+        let mut prefix = self.0.clone();
+        let suffix = prefix.split_off(index);
+        (NomBytes(suffix), NomBytes(prefix))
+    }
+
     #[inline]
     fn position<P>(&self, predicate: P) -> Option<usize>
     where
@@ -288,6 +284,17 @@ impl nom::InputIter for NomBytes {
     {
         self.0.iter().position(|b| predicate(*b))
     }
+
+    #[inline]
+    fn iter_elements(&self) -> Self::Iter {
+        self.0.clone().into_iter()
+    }
+
+    #[inline]
+    fn iter_indices(&self) -> Self::IterIndices {
+        self.iter_elements().enumerate()
+    }
+
     #[inline]
     fn slice_index(&self, count: usize) -> Result<usize, Needed> {
         if self.0.len() >= count {
@@ -295,12 +302,6 @@ impl nom::InputIter for NomBytes {
         } else {
             Err(Needed::new(count - self.0.len()))
         }
-    }
-}
-
-impl nom::Slice<RangeFrom<usize>> for NomBytes {
-    fn slice(&self, range: RangeFrom<usize>) -> Self {
-        NomBytes(self.0.slice(range))
     }
 }
 
@@ -363,7 +364,8 @@ pub(crate) fn packet<'a>(i: NomBytes) -> nom::IResult<NomBytes, (u8, Packet<'a>)
             // TODO: might know length
             (None, None) => Err(nom::Err::Incomplete(Needed::Unknown)),
         },
-    )(i)
+    )
+    .parse(i)
     .map(|(rest, parsed)| match parsed {
         Ok(parsed) => Ok((rest, parsed)),
         Err(e) => Err(e),

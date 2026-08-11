@@ -23,24 +23,33 @@ async-trait = "0.1"
 byteorder = "1"
 bytes = "1"
 chrono = "0.4"
-mysql_common = { version = "0.35", features = ["chrono"] }
-nom = "7.1.0"
-tokio = { version = "1.48", features = ["io-util", "io-std"] }
+# default-features off: mysql_common's default enables flate2/zlib (C zlib,
+# dynamically linked libz). The direct flate2 dep supplies the pure-Rust
+# backend instead so binaries stay free of libz.so.1.
+mysql_common = { version = "0.37", default-features = false, features = [
+    "chrono",
+    "derive",
+] }
+flate2 = { version = "1.1", default-features = false, features = [
+    "rust_backend",
+] }
+nom = "8.0"
+tokio = { version = "1", features = ["io-util", "io-std"] }
 tokio-rustls = { version = "0.26", optional = true, default-features = false, features = [
     "ring",
 ] }
 pin-project-lite = { version = "0.2", optional = true }
 
 [dev-dependencies]
-mysql = "24.0.0"
-mysql_async = "0.36.0"
+mysql = "28.0.0"
+mysql_async = "0.37.0"
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
-rcgen = "0.12"
-tempfile = "3.3.0"
-native-tls = "0.2.8"
-rustls-pemfile = { version = "2.0" }
-rustls-pki-types = "1.0"
+rcgen = "0.14"
+tempfile = "3"
+native-tls = "0.2"
+rustls-pemfile = { version = "2" }
+rustls-pki-types = "1"
 
 [[example]]
 name = "serve_auth"
@@ -53,4 +62,3 @@ path = "examples/serve_one.rs"
 [[example]]
 name = "serve_secure"
 path = "examples/serve_secure.rs"
-
